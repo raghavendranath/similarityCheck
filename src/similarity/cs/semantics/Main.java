@@ -16,6 +16,7 @@ import java.io.*;
 public class Main {
 
     public static void main(String[] args) {
+        System.out.println("Hi Sam");
         Options options = new Options();
         options.addRequiredOption("f", "file", true, "input file to process");
         options.addOption("h", false, "print this help message");

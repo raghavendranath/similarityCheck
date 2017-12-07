@@ -46,8 +46,8 @@ public class Main {
         //Populating stop words in ArrayList
         BufferedReader br = null;
         try{
-            br = new BufferedReader(new FileReader("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\stopwords.txt"));
-            //br = new BufferedReader(new FileReader("C:\\Users\\ragha\\OneDrive\\Documents\\NetBeansProjects\\Similarity\\stopwords.txt"));
+            //br = new BufferedReader(new FileReader("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\stopwords.txt"));
+            br = new BufferedReader(new FileReader("C:\\Users\\ragha\\OneDrive\\Documents\\NetBeansProjects\\Similarity\\stopwords.txt"));
             String sCurrentLine;
             while ((sCurrentLine = br.readLine()) != null) {
                 stopWords.add( sCurrentLine.trim());
@@ -127,12 +127,17 @@ public class Main {
     
     
     public ArrayList<String> cleanUpAndStem(String sent){
-        String arr[] = sent.toLowerCase().replaceAll("\n"," ").replaceAll(","," ").replaceAll("\""," ").split(" ");
+        //String arr[] = sent.toLowerCase().replaceAll("\n"," ").replaceAll(","," ").replaceAll("\\“"," ").replaceAll("\\”"," ").replaceAll("\\:"," ").replaceAll("\\*"," ").replaceAll("\\-"," ").replaceAll("\\["," ").replaceAll("\\]", " ").replaceAll("\\("," ").replaceAll("\\)", " ").split(" ");
+        String arr[] = sent.toLowerCase().replaceAll("\n"," ").replaceAll("[^a-zA-Z0-9\\,\\-+\\:\\;’'‘ÆÐƎƏƐƔĲŊŒẞÞǷȜæðǝəɛɣĳŋœĸſßþƿȝĄƁÇĐƊĘĦĮƘŁØƠŞȘŢȚŦŲƯY̨Ƴąɓçđɗęħįƙłøơşșţțŧųưy̨ƴÁÀÂÄǍĂĀÃÅǺĄÆǼǢƁĆĊĈČÇĎḌĐƊÐÉÈĖÊËĚĔĒĘẸƎƏƐĠĜǦĞĢƔáàâäǎăāãåǻąæǽǣɓćċĉčçďḍđɗðéèėêëěĕēęẹǝəɛġĝǧğģɣĤḤĦIÍÌİÎÏǏĬĪĨĮỊĲĴĶƘĹĻŁĽĿʼNŃN̈ŇÑŅŊÓÒÔÖǑŎŌÕŐỌØǾƠŒĥḥħıíìiîïǐĭīĩįịĳĵķƙĸĺļłľŀŉńn̈ňñņŋóòôöǒŏōõőọøǿơœŔŘŖŚŜŠŞȘṢẞŤŢṬŦÞÚÙÛÜǓŬŪŨŰŮŲỤƯẂẀŴẄǷÝỲŶŸȲỸƳŹŻŽẒŕřŗſśŝšşșṣßťţṭŧþúùûüǔŭūũűůųụưẃẁŵẅƿýỳŷÿȳỹƴźżžẓ]"," " ).split(" ");
+
         //String unique[]= Arrays.stream(arr).distinct().toArray(String[]::new);
         ArrayList<String> result = new ArrayList<>();
         PorterStemmer ptr = new PorterStemmer();
         for(String str: arr){
             str = str.trim();
+            //to remove including numbers in the vector
+            if(str.matches(".*\\d+.*"))
+                continue;
             if(!stopWords.contains(str) && !str.isEmpty()){
                 String temp = ptr.stem(str);
                 //System.out.println("Actual String:"+str+"   Stemmed string:"+temp+" StopWords:"+stopWords.contains(str));
@@ -214,7 +219,8 @@ public class Main {
         PrintWriter writer = null;
         //int count = 0;
         try{
-            writer = new PrintWriter("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\output.txt");
+            //writer = new PrintWriter("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\output.txt");
+            writer = new PrintWriter("C:\\Users\\ragha\\OneDrive\\Documents\\NetBeansProjects\\Similarity\\output.txt");
             while (it.hasNext()) {
                 Map.Entry pair = (Map.Entry)it.next(); 
                 word = (String) pair.getKey();

@@ -44,7 +44,8 @@ public class Main {
         //Populating stop words in ArrayList
         BufferedReader br = null;
         try{
-            br = new BufferedReader(new FileReader("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\stopwords.txt"));
+            //br = new BufferedReader(new FileReader("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\stopwords.txt"));
+            br = new BufferedReader(new FileReader("C:\\Users\\ragha\\OneDrive\\Documents\\NetBeansProjects\\Similarity\\stopwords.txt"));
             String sCurrentLine;
             while ((sCurrentLine = br.readLine()) != null) {
                 stopWords.add( sCurrentLine.trim());
@@ -79,7 +80,7 @@ public class Main {
             System.out.println();
         }
         
-        HashMap<String, List<WordFrequency>> allVectors = obj.makeVectors(allWords);
+        TreeMap<String, List<WordFrequency>> allVectors = obj.makeVectors(allWords);
         obj.printVectors(allVectors);
                 
         if (cmd.hasOption("h")) {
@@ -94,20 +95,21 @@ public class Main {
     
     public ArrayList<String> cleanUpAndStem(String sent){
         String arr[] = sent.toLowerCase().replaceAll("\n"," ").replaceAll(","," ").replaceAll("\""," ").split(" ");
-        String unique[]= Arrays.stream(arr).distinct().toArray(String[]::new);
+        //String unique[]= Arrays.stream(arr).distinct().toArray(String[]::new);
         ArrayList<String> result = new ArrayList<>();
         PorterStemmer ptr = new PorterStemmer();
-        for(String str: unique){
+        for(String str: arr){
             if(!stopWords.contains(str) && !str.isEmpty()){
                 String temp = ptr.stem(str);
+                //System.out.println("Actual String:"+str+"   Stemmed string:"+temp+" StopWords:"+stopWords.contains(str));
                 result.add(temp);
             }
         }
         //return result.toArray(new String[0]);
-        return result;
+          return result;
     }
     
-    public HashMap<String, List<WordFrequency>> makeVectors(List<List<String>> words){
+    public TreeMap<String, List<WordFrequency>> makeVectors(List<List<String>> words){
         //make a hashset of unique words
         HashSet<String> uniqueWords = new HashSet<String>();
         //int count = 0;
@@ -121,32 +123,49 @@ public class Main {
         }
         //System.out.println("count: "+count);
         
-        HashMap<String, List<WordFrequency>> allVectors = new HashMap<String, List<WordFrequency>>();
+        TreeMap<String, List<WordFrequency>> allVectors = new TreeMap<String, List<WordFrequency>>();
         Iterator iterator = uniqueWords.iterator();
         while (iterator.hasNext()){
             String currentWord = (String) iterator.next();
             //System.out.println("Current word: "+currentWord+" ----------------");
-            HashMap<String, Integer> hashMap = new HashMap<String, Integer>();
+            TreeMap<String, Integer> treeMap = new TreeMap<String, Integer>();
             //System.out.println("word: "+currentWord + " ");  
             for(int i=0;i<words.size();i++){
                 List wordsInASentence = words.get(i);
                 if(wordsInASentence.contains(currentWord)){
                     for(int j=0;j<wordsInASentence.size();j++){
                         String word = (String) wordsInASentence.get(j);
-                        if(word.equals(currentWord)) continue;
-                        if(hashMap.containsKey(word)){
-                            hashMap.put(word, hashMap.get(word)+1);
+                        if(word.equals(currentWord)){
+                            if(treeMap.containsKey(word))
+                                continue;
+                            else
+                                treeMap.put(word, 0);
+                            continue;
+                        }
+                        if(treeMap.containsKey(word)){
+                            treeMap.put(word, treeMap.get(word)+1);
                         }
                         else{
-                            hashMap.put(word, 1);
+                            treeMap.put(word, 1);
                         }
                     }
+                }
+                else{
+                     for(int j=0;j<wordsInASentence.size();j++){
+                        String word = (String) wordsInASentence.get(j);
+                        if(treeMap.containsKey(word))
+                            continue;
+                        else
+                            treeMap.put(word, 0);
+                        
+                     }
+                    
                 }
             }
             
             WordFrequency wordFrequency;
             List<WordFrequency> vector = new ArrayList<WordFrequency>();
-            Iterator it = hashMap.entrySet().iterator();
+            Iterator it = treeMap.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry pair = (Map.Entry)it.next();
                 //System.out.println(pair.getKey() + " = " + pair.getValue());
@@ -154,13 +173,13 @@ public class Main {
                 vector.add(wordFrequency);
                 it.remove(); // avoids a ConcurrentModificationException
             }
-            Collections.sort(vector);
+            //Collections.sort(vector);
             allVectors.put(currentWord, vector);
         }
         return allVectors;
     }
     
-    public void printVectors(HashMap<String, List<WordFrequency>> allVectors){
+    public void printVectors(TreeMap<String, List<WordFrequency>> allVectors){
         Iterator it = allVectors.entrySet().iterator();
         String word;
         List<WordFrequency> wordsWithFrequencies;

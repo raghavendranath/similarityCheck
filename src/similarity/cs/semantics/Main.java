@@ -88,17 +88,12 @@ public class Main {
         PorterStemmer ptr = new PorterStemmer();
         queryWord = ptr.stem(queryWord);
         
-        List<WordFrequency> queryVector = obj.makeQueryVector(queryWord, allWords);
-        if(queryVector == null)
-            System.out.println("Cannot compute top J similarity to Q");
+        if(!allVectors.containsKey(queryWord))
+            System.out.println("Cannot compute top-J similarity to "+queryWord);
         else{
-            System.out.print(queryWord+": [");
-            for(WordFrequency word: queryVector){
-                System.out.print(word.word+"="+word.frequency+" ");
-            }
-            System.out.print("]");
-            System.out.println();
-            
+            List<Pairs> results =  obj.computeScores(queryWord, allVectors);
+            int num = 6;
+            obj.printScores(results,num);
         }
         
         
@@ -215,61 +210,8 @@ public class Main {
         }
     }
     
-     public List<WordFrequency> makeQueryVector(String query, List<List<String>> words){
-         TreeMap<String, Integer> treeMap = new TreeMap<String, Integer>();
-         //for couting if the word is present in a sentence. If none contains you return null;
-         int presentCount = 0;
-          for(int i=0;i<words.size();i++){
-                List wordsInASentence = words.get(i);
-                if(wordsInASentence.contains(query)){
-                    for(int j=0;j<wordsInASentence.size();j++){
-                        String word = (String) wordsInASentence.get(j);
-                        if(word.equals(query)){
-                            if(treeMap.containsKey(word))
-                                continue;
-                            else
-                                treeMap.put(word, 0);
-                            continue;
-                        }
-                        if(treeMap.containsKey(word)){
-                            treeMap.put(word, treeMap.get(word)+1);
-                        }
-                        else{
-                            treeMap.put(word, 1);
-                        }
-                    }
-                }
-                else{
-                    presentCount++;
-                     for(int j=0;j<wordsInASentence.size();j++){
-                        String word = (String) wordsInASentence.get(j);
-                        if(treeMap.containsKey(word))
-                            continue;
-                        else
-                            treeMap.put(word, 0);
-                        
-                     }
-                    
-                }
-          }
-          if(presentCount == words.size())
-              return null;
-          WordFrequency wordFrequency;
-          List<WordFrequency> vector = new ArrayList<WordFrequency>();
-          Iterator it = treeMap.entrySet().iterator();
-          while (it.hasNext()) {
-              Map.Entry pair = (Map.Entry)it.next();
-              //System.out.println(pair.getKey() + " = " + pair.getValue());
-              wordFrequency = new WordFrequency( (String) pair.getKey(), (Integer) pair.getValue());
-              vector.add(wordFrequency);
-              it.remove(); // avoids a ConcurrentModificationException
-          }
-          //Collections.sort(vector);
-          return vector;
-          
-     }
-     
-     
+        
+     //Cosine similarity
      public double cosineSimilarity(List<WordFrequency> u, List<WordFrequency> v){
          //U and V same size
          double sumUV = 0;
@@ -286,6 +228,43 @@ public class Main {
          }
          double result = (sumUV)/Math.sqrt(sumUsquare*sumVSquare);
          return result;
+     }
+     
+     //For computing the scores
+     public List<Pairs> computeScores(String queryWord, TreeMap<String, List<WordFrequency>> allVectors ){
+        Iterator it = allVectors.entrySet().iterator();
+        List<WordFrequency> queryVector = allVectors.get(queryWord);
+        String word;
+        List<Pairs> wordsWithScores = new ArrayList<>();
+        List<WordFrequency> wordsWithFrequencies;
+        Pairs temp ;
+        double result;
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry)it.next(); 
+            word = (String) pair.getKey();
+            if(word.equals(queryWord))
+                continue;
+            wordsWithFrequencies = (List<WordFrequency>) pair.getValue();
+            result = cosineSimilarity(queryVector, wordsWithFrequencies);
+            temp = new Pairs(word, result);
+            temp.word = word;
+            temp.score = result;
+            wordsWithScores.add(temp);
+        }
+        Collections.sort(wordsWithScores);
+        return wordsWithScores;
+     }
+     
+     
+     public void printScores(List<Pairs> pairs, int n){
+         Pairs temp;
+         System.out.println();
+         System.out.print("[");
+         for(int i=0; i<n && i< pairs.size(); i++){
+             temp = pairs.get(i);
+             System.out.print("Pair{"+temp.word+","+temp.score+"}, ");
+         }
+         System.out.print("]");
      }
     
 }

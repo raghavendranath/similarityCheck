@@ -24,7 +24,9 @@ public class Main {
         Options options = new Options();
         options.addRequiredOption("f", "file", true, "input file to process");
         options.addOption("h", false, "print this help message");
-
+        options.addOption("s", false, "option for sentences");
+        options.addOption("v", false, "option for vectors");
+        options.addOption("t", "tValues", true, "word,integer to process");
         CommandLineParser parser = new DefaultParser();
 
         CommandLine cmd = null;
@@ -71,33 +73,43 @@ public class Main {
             ArrayList<String> wordsInASentence = obj.cleanUpAndStem(sc.next().trim());
             allWords.add(wordsInASentence);
         }
-              
-        for(int i=0;i<allWords.size();i++){
-            List wordsInASentence = allWords.get(i);
-            for(int j=0;j<wordsInASentence.size();j++){
-                System.out.print(wordsInASentence.get(j)+",");
-            }
-            System.out.println();
+        
+        //For printing sentences
+        if(cmd.hasOption("s")){
+            for(int i=0;i<allWords.size();i++){
+                List wordsInASentence = allWords.get(i);
+                System.out.print("[");
+                for(int j=0;j<wordsInASentence.size();j++){
+                    System.out.print(wordsInASentence.get(j)+",");
+                }
+                System.out.print("]");
+                System.out.println();
+             }
         }
+        
+        
         
         TreeMap<String, List<WordFrequency>> allVectors = obj.makeVectors(allWords);
-        obj.printVectors(allVectors);
         
+        //To print the descriptors
+        if(cmd.hasOption("v"))
+            obj.printVectors(allVectors);
         
-        String queryWord = "cat";
-        PorterStemmer ptr = new PorterStemmer();
-        queryWord = ptr.stem(queryWord);
-        
-        if(!allVectors.containsKey(queryWord))
-            System.out.println("Cannot compute top-J similarity to "+queryWord);
-        else{
-            List<Pairs> results =  obj.computeScores(queryWord, allVectors);
-            int num = 6;
-            obj.printScores(results,num);
-        }
-        
-        
-        
+       if(cmd.hasOption("t")){
+           String arguments[] = cmd.getOptionValue("t").trim().split(",");
+           String queryWord = arguments[0];
+           int num = Integer.parseInt(arguments[1]);
+           PorterStemmer ptr = new PorterStemmer();
+           queryWord = ptr.stem(queryWord);
+            if(!allVectors.containsKey(queryWord))
+                System.out.println("Cannot compute top-J similarity to "+queryWord);
+           else{
+                List<Pairs> results =  obj.computeScores(queryWord, allVectors);
+                obj.printScores(results,num);
+            }
+       } 
+
+         
         if (cmd.hasOption("h")) {
             HelpFormatter helpf = new HelpFormatter();
             helpf.printHelp("Main", options, true);

@@ -268,6 +268,25 @@ public class Main {
           return vector;
           
      }
+     
+     
+     public double cosineSimilarity(List<WordFrequency> u, List<WordFrequency> v){
+         //U and V same size
+         double sumUV = 0;
+         double sumUsquare = 0;
+         double sumVSquare = 0;
+         WordFrequency uTemp = null;
+         WordFrequency vTemp = null;
+         for(int i=0; i< u.size();i++){
+             uTemp = u.get(i);
+             vTemp = v.get(i);
+             sumUV = sumUV + uTemp.frequency*vTemp.frequency;
+             sumUsquare = sumUsquare+Math.pow(uTemp.frequency,2);
+             sumVSquare = sumVSquare+Math.pow(vTemp.frequency,2);
+         }
+         double result = (sumUV)/Math.sqrt(sumUsquare*sumVSquare);
+         return result;
+     }
     
 }
     

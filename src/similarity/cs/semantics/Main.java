@@ -82,14 +82,34 @@ public class Main {
         
         TreeMap<String, List<WordFrequency>> allVectors = obj.makeVectors(allWords);
         obj.printVectors(allVectors);
-                
+        
+        
+        String queryWord = "cat";
+        PorterStemmer ptr = new PorterStemmer();
+        queryWord = ptr.stem(queryWord);
+        
+        List<WordFrequency> queryVector = obj.makeQueryVector(queryWord, allWords);
+        if(queryVector == null)
+            System.out.println("Cannot compute top J similarity to Q");
+        else{
+            System.out.print(queryWord+": [");
+            for(WordFrequency word: queryVector){
+                System.out.print(word.word+"="+word.frequency+" ");
+            }
+            System.out.print("]");
+            System.out.println();
+            
+        }
+        
+        
+        
         if (cmd.hasOption("h")) {
             HelpFormatter helpf = new HelpFormatter();
             helpf.printHelp("Main", options, true);
             System.exit(0);
         }
         
-        System.out.println(filename);     
+        //System.out.println(filename);     
     }
     
     
@@ -194,5 +214,60 @@ public class Main {
             System.out.println("]");
         }
     }
+    
+     public List<WordFrequency> makeQueryVector(String query, List<List<String>> words){
+         TreeMap<String, Integer> treeMap = new TreeMap<String, Integer>();
+         //for couting if the word is present in a sentence. If none contains you return null;
+         int presentCount = 0;
+          for(int i=0;i<words.size();i++){
+                List wordsInASentence = words.get(i);
+                if(wordsInASentence.contains(query)){
+                    for(int j=0;j<wordsInASentence.size();j++){
+                        String word = (String) wordsInASentence.get(j);
+                        if(word.equals(query)){
+                            if(treeMap.containsKey(word))
+                                continue;
+                            else
+                                treeMap.put(word, 0);
+                            continue;
+                        }
+                        if(treeMap.containsKey(word)){
+                            treeMap.put(word, treeMap.get(word)+1);
+                        }
+                        else{
+                            treeMap.put(word, 1);
+                        }
+                    }
+                }
+                else{
+                    presentCount++;
+                     for(int j=0;j<wordsInASentence.size();j++){
+                        String word = (String) wordsInASentence.get(j);
+                        if(treeMap.containsKey(word))
+                            continue;
+                        else
+                            treeMap.put(word, 0);
+                        
+                     }
+                    
+                }
+          }
+          if(presentCount == words.size())
+              return null;
+          WordFrequency wordFrequency;
+          List<WordFrequency> vector = new ArrayList<WordFrequency>();
+          Iterator it = treeMap.entrySet().iterator();
+          while (it.hasNext()) {
+              Map.Entry pair = (Map.Entry)it.next();
+              //System.out.println(pair.getKey() + " = " + pair.getValue());
+              wordFrequency = new WordFrequency( (String) pair.getKey(), (Integer) pair.getValue());
+              vector.add(wordFrequency);
+              it.remove(); // avoids a ConcurrentModificationException
+          }
+          //Collections.sort(vector);
+          return vector;
+          
+     }
+    
 }
     

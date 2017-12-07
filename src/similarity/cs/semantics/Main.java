@@ -46,8 +46,8 @@ public class Main {
         //Populating stop words in ArrayList
         BufferedReader br = null;
         try{
-            //br = new BufferedReader(new FileReader("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\stopwords.txt"));
-            br = new BufferedReader(new FileReader("C:\\Users\\ragha\\OneDrive\\Documents\\NetBeansProjects\\Similarity\\stopwords.txt"));
+            br = new BufferedReader(new FileReader("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\stopwords.txt"));
+            //br = new BufferedReader(new FileReader("C:\\Users\\ragha\\OneDrive\\Documents\\NetBeansProjects\\Similarity\\stopwords.txt"));
             String sCurrentLine;
             while ((sCurrentLine = br.readLine()) != null) {
                 stopWords.add( sCurrentLine.trim());
@@ -70,7 +70,8 @@ public class Main {
         
         //ArrayList<String[]> words = new ArrayList<>();
         while(sc.hasNext()){
-            ArrayList<String> wordsInASentence = obj.cleanUpAndStem(sc.next().trim());
+            String temp = sc.next();
+            ArrayList<String> wordsInASentence = obj.cleanUpAndStem(temp.trim());
             allWords.add(wordsInASentence);
         }
         
@@ -79,6 +80,10 @@ public class Main {
             for(int i=0;i<allWords.size();i++){
                 List wordsInASentence = allWords.get(i);
                 System.out.print("[");
+                try{ Thread.sleep(1000); 
+                }catch (Exception e){
+                    System.err.println(e);
+                }
                 for(int j=0;j<wordsInASentence.size();j++){
                     System.out.print(wordsInASentence.get(j)+",");
                 }
@@ -92,8 +97,9 @@ public class Main {
         TreeMap<String, List<WordFrequency>> allVectors = obj.makeVectors(allWords);
         
         //To print the descriptors
-        if(cmd.hasOption("v"))
+        if(cmd.hasOption("v")){
             obj.printVectors(allVectors);
+        }
         
        if(cmd.hasOption("t")){
            String arguments[] = cmd.getOptionValue("t").trim().split(",");
@@ -126,6 +132,7 @@ public class Main {
         ArrayList<String> result = new ArrayList<>();
         PorterStemmer ptr = new PorterStemmer();
         for(String str: arr){
+            str = str.trim();
             if(!stopWords.contains(str) && !str.isEmpty()){
                 String temp = ptr.stem(str);
                 //System.out.println("Actual String:"+str+"   Stemmed string:"+temp+" StopWords:"+stopWords.contains(str));
@@ -163,9 +170,7 @@ public class Main {
                     for(int j=0;j<wordsInASentence.size();j++){
                         String word = (String) wordsInASentence.get(j);
                         if(word.equals(currentWord)){
-                            if(treeMap.containsKey(word))
-                                continue;
-                            else
+                            if(!treeMap.containsKey(word))
                                 treeMap.put(word, 0);
                             continue;
                         }
@@ -180,13 +185,9 @@ public class Main {
                 else{
                      for(int j=0;j<wordsInASentence.size();j++){
                         String word = (String) wordsInASentence.get(j);
-                        if(treeMap.containsKey(word))
-                            continue;
-                        else
+                        if(!treeMap.containsKey(word))
                             treeMap.put(word, 0);
-                        
-                     }
-                    
+                    }
                 }
             }
             
@@ -206,19 +207,35 @@ public class Main {
         return allVectors;
     }
     
-    public void printVectors(TreeMap<String, List<WordFrequency>> allVectors){
+    public void printVectors(TreeMap<String, List<WordFrequency>> allVectors) {
         Iterator it = allVectors.entrySet().iterator();
         String word;
         List<WordFrequency> wordsWithFrequencies;
-        while (it.hasNext()) {
-            Map.Entry pair = (Map.Entry)it.next(); 
-            word = (String) pair.getKey();
-            wordsWithFrequencies = (List<WordFrequency>) pair.getValue();
-            System.out.print(word+": [ ");
-            for(WordFrequency wordWithFrequency: wordsWithFrequencies){
-                System.out.print(wordWithFrequency.word+"="+wordWithFrequency.frequency+" ");
+        PrintWriter writer = null;
+        //int count = 0;
+        try{
+            writer = new PrintWriter("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\output.txt");
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry)it.next(); 
+                word = (String) pair.getKey();
+                wordsWithFrequencies = (List<WordFrequency>) pair.getValue();
+                //System.out.print(word+": [ ");
+                writer.append(word+": [ ");
+                for(WordFrequency wordWithFrequency: wordsWithFrequencies){
+                    //System.out.print(wordWithFrequency.word+"="+wordWithFrequency.frequency+" ");
+                    writer.append(wordWithFrequency.word+"="+wordWithFrequency.frequency+" ");
+                }
+                //System.out.println("]");
+                writer.append("]");
+                writer.append("\n");
+                //if(count++==30) break;
             }
-            System.out.println("]");
+        }
+        catch(Exception e){
+            System.err.println(e.getMessage());
+        }
+        finally{
+            if(writer!=null) writer.close();            
         }
     }
     

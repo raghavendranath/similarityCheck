@@ -46,8 +46,8 @@ public class Main {
         //Populating stop words in ArrayList
         BufferedReader br = null;
         try{
-            //br = new BufferedReader(new FileReader("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\stopwords.txt"));
-            br = new BufferedReader(new FileReader("C:\\Users\\ragha\\OneDrive\\Documents\\NetBeansProjects\\Similarity\\stopwords.txt"));
+            br = new BufferedReader(new FileReader("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\stopwords.txt"));
+            //br = new BufferedReader(new FileReader("C:\\Users\\ragha\\OneDrive\\Documents\\NetBeansProjects\\Similarity\\stopwords.txt"));
             String sCurrentLine;
             while ((sCurrentLine = br.readLine()) != null) {
                 stopWords.add( sCurrentLine.trim());
@@ -92,7 +92,8 @@ public class Main {
              }
         }
         
-        
+        //Step 5 testing - remove below comment to test
+        obj.testTaskFive();
         
         TreeMap<String, List<WordFrequency>> allVectors = obj.makeVectors(allWords);
         
@@ -110,7 +111,12 @@ public class Main {
             if(!allVectors.containsKey(queryWord))
                 System.out.println("Cannot compute top-J similarity to "+queryWord);
            else{
-                List<Pairs> results =  obj.computeScores(queryWord, allVectors);
+                String measureToUse = "";
+                if(cmd.hasOption("m")){
+                    arguments = cmd.getOptionValue("m").trim().split(",");
+                    measureToUse = arguments[0];
+                }
+                List<Pairs> results =  obj.computeScores(queryWord, allVectors, measureToUse);
                 obj.printScores(results,num);
             }
        } 
@@ -219,8 +225,8 @@ public class Main {
         PrintWriter writer = null;
         //int count = 0;
         try{
-            //writer = new PrintWriter("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\output.txt");
-            writer = new PrintWriter("C:\\Users\\ragha\\OneDrive\\Documents\\NetBeansProjects\\Similarity\\output.txt");
+            writer = new PrintWriter("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\output.txt");
+            //writer = new PrintWriter("C:\\Users\\ragha\\OneDrive\\Documents\\NetBeansProjects\\Similarity\\output.txt");
             while (it.hasNext()) {
                 Map.Entry pair = (Map.Entry)it.next(); 
                 word = (String) pair.getKey();
@@ -246,6 +252,40 @@ public class Main {
     }
     
         
+     //For computing the scores
+     public List<Pairs> computeScores(String queryWord, TreeMap<String, List<WordFrequency>> allVectors, String measureToUse){
+        Iterator it = allVectors.entrySet().iterator();
+        List<WordFrequency> queryVector = allVectors.get(queryWord);
+        String word;
+        List<Pairs> wordsWithScores = new ArrayList<>();
+        List<WordFrequency> otherVector;
+        Pairs temp ;
+        double result;
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry)it.next(); 
+            word = (String) pair.getKey();
+            if(word.equals(queryWord))
+                continue;
+            otherVector = (List<WordFrequency>) pair.getValue();
+            switch(measureToUse){
+                case "euc":
+                    result = euclideanDistance(queryVector, otherVector);
+                    break;
+                case "eucnorm":
+                    result = euclideanDistanceNorm(queryVector, otherVector);
+                    break;
+                default:
+                    result = cosineSimilarity(queryVector, otherVector);
+            }
+            temp = new Pairs(word, result);
+            temp.word = word;
+            temp.score = result;
+            wordsWithScores.add(temp);
+        }
+        Collections.sort(wordsWithScores);
+        return wordsWithScores;
+     }
+     
      //Cosine similarity
      public double cosineSimilarity(List<WordFrequency> u, List<WordFrequency> v){
          //U and V same size
@@ -265,31 +305,56 @@ public class Main {
          return result;
      }
      
-     //For computing the scores
-     public List<Pairs> computeScores(String queryWord, TreeMap<String, List<WordFrequency>> allVectors ){
-        Iterator it = allVectors.entrySet().iterator();
-        List<WordFrequency> queryVector = allVectors.get(queryWord);
-        String word;
-        List<Pairs> wordsWithScores = new ArrayList<>();
-        List<WordFrequency> wordsWithFrequencies;
-        Pairs temp ;
-        double result;
-        while (it.hasNext()) {
-            Map.Entry pair = (Map.Entry)it.next(); 
-            word = (String) pair.getKey();
-            if(word.equals(queryWord))
-                continue;
-            wordsWithFrequencies = (List<WordFrequency>) pair.getValue();
-            result = cosineSimilarity(queryVector, wordsWithFrequencies);
-            temp = new Pairs(word, result);
-            temp.word = word;
-            temp.score = result;
-            wordsWithScores.add(temp);
-        }
-        Collections.sort(wordsWithScores);
-        return wordsWithScores;
+     //Step 5
+     //Euclidean Distance
+     public double euclideanDistance(List<WordFrequency> u, List<WordFrequency> v){
+         double[] one = convertWFListsToArrays(u);
+         double[] two = convertWFListsToArrays(v);
+         return euclideanDistance(one, two);
      }
      
+     public double[] convertWFListsToArrays(List<WordFrequency> input){
+         double[] result = new double[input.size()];
+         for(int i=0; i< input.size();i++){
+             result[i] = input.get(i).frequency;
+         }
+         return result;
+     }
+     
+     public double euclideanDistance(double[] u, double[] v){
+         double result = 0;
+         double sumOfSquares = 0;
+         for(int i=0; i< u.length;i++){
+             //System.out.println("x: "+u[i]+" - y: "+v[i]);
+             sumOfSquares += (u[i]-v[i])*(u[i]-v[i]);
+             //System.out.println("sumOfSquares: "+sumOfSquares);
+         }
+         result = -Math.sqrt(sumOfSquares);
+         return result;
+
+     }
+     
+     public double euclideanDistanceNorm(List<WordFrequency> u, List<WordFrequency> v){
+         double[] one = normalize(u); 
+         double[] two = normalize(v);
+         return euclideanDistance(one, two);
+     }
+     
+     public double[] normalize(List<WordFrequency> input){
+         double sumOfSquares = 0;
+         for(int i=0; i< input.size();i++){
+             WordFrequency current = input.get(i);
+             sumOfSquares += current.frequency*current.frequency;
+         }
+         double denominator = Math.sqrt(sumOfSquares);
+         double[] result = new double[input.size()];
+         for(int i=0; i< input.size();i++){
+             WordFrequency current = input.get(i);
+             result[i] = (double)current.frequency/denominator;
+             //System.out.println("result["+i+"]: "+result[i]);
+         }
+         return result;
+     }
      
      public void printScores(List<Pairs> pairs, int n){
          Pairs temp;
@@ -302,5 +367,16 @@ public class Main {
          System.out.print("]");
      }
     
+     public void testTaskFive(){
+        List<WordFrequency> u = new ArrayList<WordFrequency>();
+        List<WordFrequency> v = new ArrayList<WordFrequency>();
+        u.add(new WordFrequency("a", 1)); u.add(new WordFrequency("b", 4)); u.add(new WordFrequency("c", 1)); u.add(new WordFrequency("d", 0));
+        u.add(new WordFrequency("e", 0)); u.add(new WordFrequency("f", 0));
+        v.add(new WordFrequency("a", 3)); v.add(new WordFrequency("b", 0)); v.add(new WordFrequency("c", 0)); v.add(new WordFrequency("d", 1));
+        v.add(new WordFrequency("e", 1)); v.add(new WordFrequency("f", 2));
+        System.out.println("Euclidean distance: "+euclideanDistance(u, v));
+        
+        System.out.println("Euclidean distance with normalized vectors: "+euclideanDistanceNorm(u, v));
+     }
 }
     

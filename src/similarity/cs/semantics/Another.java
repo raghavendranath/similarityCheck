@@ -14,8 +14,8 @@ import org.apache.commons.cli.*;
 import java.io.*;
 import java.util.*;
 import opennlp.tools.stemmer.*;
-
-public class Main {
+/*
+public class Another {
     //Stop words
     static ArrayList<String> stopWords = new ArrayList<>();
 
@@ -27,7 +27,6 @@ public class Main {
         options.addOption("s", false, "option for sentences");
         options.addOption("v", false, "option for vectors");
         options.addOption("t", "tValues", true, "word,integer to process");
-        options.addOption("k", "kMeans", true, "integer,integer,[integer] to process");
         CommandLineParser parser = new DefaultParser();
 
         CommandLine cmd = null;
@@ -66,14 +65,13 @@ public class Main {
             }
         }
            
-        Main obj = new Main();
+        Another obj = new Another();
         Scanner sc = new Scanner(new File(filename)).useDelimiter("(\\.|\\?|\\!)");
         List<List<String>> allWords = new ArrayList<List<String>>();
         
         //ArrayList<String[]> words = new ArrayList<>();
         while(sc.hasNext()){
             String temp = sc.next();
-            //System.out.println(temp);
             ArrayList<String> wordsInASentence = obj.cleanUpAndStem(temp.trim());
             allWords.add(wordsInASentence);
         }
@@ -96,9 +94,10 @@ public class Main {
         }
         
         //Step 5 testing - remove below comment to test
-        //obj.testTaskFive();
+        obj.testTaskFive();
         
-        TreeMap<String, List<WordFrequency>> allVectors = obj.makeVectors(allWords);
+        //1TreeMap<String, List<WordFrequency>> allVectors = obj.makeVectors(allWords);
+        List<Vector> allVectors = obj.makeVectors(allWords);
         
         //To print the descriptors
         if(cmd.hasOption("v")){
@@ -111,7 +110,16 @@ public class Main {
            int num = Integer.parseInt(arguments[1]);
            PorterStemmer ptr = new PorterStemmer();
            queryWord = ptr.stem(queryWord);
-            if(!allVectors.containsKey(queryWord))
+           boolean containsWord = false;
+           int index = -1;
+           for(int i=0;i<allVectors.size();i++){
+               if(allVectors.get(i).keyWord.equals(queryWord)){
+                   containsWord = true;
+                   index = i;
+                   break;
+               }
+           }
+            if(!containsWord)
                 System.out.println("Cannot compute top-J similarity to "+queryWord);
            else{
                 String measureToUse = "";
@@ -119,27 +127,15 @@ public class Main {
                     arguments = cmd.getOptionValue("m").trim().split(",");
                     measureToUse = arguments[0];
                 }
-                List<Pairs> results =  obj.computeScores(queryWord, allVectors, measureToUse);
+                List<Pairs> results =  obj.computeScores(queryWord, allVectors, index, measureToUse);
                 obj.printScores(results,num);
             }
-        } 
+       } 
 
-        //task 6
-        if(cmd.hasOption("k")){
-           String arguments[] = cmd.getOptionValue("k").trim().split(",");
-           if(arguments.length<2){
-                System.err.println("Must provide atleast 2 argumets with the option k");
-           }
-           else{
-                int k = Integer.parseInt(arguments[0]);
-                int iter = Integer.parseInt(arguments[1]);
-                int j = -1;
-                if(arguments.length==3)
-                    j = Integer.parseInt(arguments[2]);
-                obj.generateKMeans(allVectors, k, iter, j);               
-           }
-        }
-        
+       //task 6
+       int k = 10; int iter = 10;
+       obj.generateKMeans(allVectors, k, iter);
+       
         if (cmd.hasOption("h")) {
             HelpFormatter helpf = new HelpFormatter();
             helpf.printHelp("Main", options, true);
@@ -172,7 +168,7 @@ public class Main {
           return result;
     }
     
-    public TreeMap<String, List<WordFrequency>> makeVectors(List<List<String>> words){
+    public List<Vector> makeVectors(List<List<String>> words){
         //make a hashset of unique words
         HashSet<String> uniqueWords = new HashSet<String>();
         //int count = 0;
@@ -186,7 +182,8 @@ public class Main {
         }
         //System.out.println("count: "+count);
         
-        TreeMap<String, List<WordFrequency>> allVectors = new TreeMap<String, List<WordFrequency>>();
+        //1TreeMap<String, List<WordFrequency>> allVectors = new TreeMap<String, List<WordFrequency>>();
+        List<Vector> allVectors = new ArrayList<>();
         Iterator iterator = uniqueWords.iterator();
         while (iterator.hasNext()){
             String currentWord = (String) iterator.next();
@@ -231,13 +228,13 @@ public class Main {
                 it.remove(); // avoids a ConcurrentModificationException
             }
             //Collections.sort(vector);
-            allVectors.put(currentWord, vector);
+            allVectors.add(new Vector(currentWord, vector));
         }
         return allVectors;
     }
     
-    public void printVectors(TreeMap<String, List<WordFrequency>> allVectors) {
-        Iterator it = allVectors.entrySet().iterator();
+    public void printVectors(List<Vector> allVectors) {
+        //1Iterator it = allVectors.entrySet().iterator();
         String word;
         List<WordFrequency> wordsWithFrequencies;
         PrintWriter writer = null;
@@ -246,10 +243,11 @@ public class Main {
             //writer = new PrintWriter("C:\\Users\\Samanvoy\\Documents\\NetBeansProjects\\similarityCheck\\output.txt");
             writer = new PrintWriter("output2.txt");
             //writer = new PrintWriter("C:\\Users\\ragha\\OneDrive\\Documents\\NetBeansProjects\\Similarity\\output.txt");
-            while (it.hasNext()) {
-                Map.Entry pair = (Map.Entry)it.next(); 
-                word = (String) pair.getKey();
-                wordsWithFrequencies = (List<WordFrequency>) pair.getValue();
+            for(int i=0;i<allVectors.size();i++) {
+                //1Map.Entry pair = (Map.Entry)it.next();
+                Vector v = allVectors.get(i);
+                word = v.keyWord;
+                wordsWithFrequencies = v.listOfWordFrequencies;
                 System.out.print(word+": [ ");
                 //writer.append(word+": [ ");
                 for(WordFrequency wordWithFrequency: wordsWithFrequencies){
@@ -272,63 +270,35 @@ public class Main {
     
         
      //For computing the scores
-     public List<Pairs> computeScores(String queryWord, TreeMap<String, List<WordFrequency>> allVectors, String measureToUse){
-        //Iterator it = allVectors.entrySet().iterator();
-        List<WordFrequency> queryWF = allVectors.get(queryWord);
-        Vector[] vectorList = convertTreeMapToVectors(allVectors);
-        return computeScores(queryWF, Arrays.asList(vectorList), measureToUse, queryWord, true);
-        /*String word;
+     public List<Pairs> computeScores(String queryWord, List<Vector> allVectors, int index, String measureToUse){
+        //1Iterator it = allVectors.entrySet().iterator();
+        List<WordFrequency> queryVectorValue = allVectors.get(index).listOfWordFrequencies;
+        String word;
         List<Pairs> wordsWithScores = new ArrayList<>();
-        List<WordFrequency> otherWF;
+        List<WordFrequency> otherVectorValue;
         Pairs temp ;
         double result;
-        while (it.hasNext()) {
-            Map.Entry pair = (Map.Entry)it.next(); 
-            word = (String) pair.getKey();
+        //1while (it.hasNext()) {
+        for(int i=0;i<allVectors.size();i++) {
+            //1Map.Entry pair = (Map.Entry)it.next(); 
+            Vector v = allVectors.get(i);
+            word = v.keyWord;
             if(word.equals(queryWord))
                 continue;
-            otherWF = (List<WordFrequency>) pair.getValue();
+            otherVectorValue = v.listOfWordFrequencies;
             switch(measureToUse){
                 case "euc":
-                    result = euclideanDistance(queryWF, otherWF);
+                    result = euclideanDistance(queryVectorValue, otherVectorValue);
                     break;
                 case "eucnorm":
-                    result = euclideanDistanceNorm(queryWF, otherWF);
+                    result = euclideanDistanceNorm(queryVectorValue, otherVectorValue);
                     break;
                 default:
-                    result = cosineSimilarity(queryWF, otherWF);
+                    result = cosineSimilarity(queryVectorValue, otherVectorValue);
             }
             temp = new Pairs(word, result);
             temp.word = word;
             temp.score = result;
-            wordsWithScores.add(temp);
-        }
-        Collections.sort(wordsWithScores);
-        return wordsWithScores;*/
-     }
-     
-     public List<Pairs> computeScores(List<WordFrequency> queryWF, List<Vector> allVectors , String measureToUse, String queryWord, boolean shouldUseWord){
-        List<Pairs> wordsWithScores = new ArrayList<>();
-        List<WordFrequency> otherWF;
-        String word;
-        Pairs temp ;
-        double result;
-        for(Vector vector : allVectors){
-            word = vector.keyWord;
-            if(shouldUseWord && word.equals(queryWord))
-                continue;
-            otherWF = vector.listOfWordFrequencies;
-            switch(measureToUse){
-                case "euc":
-                    result = euclideanDistance(queryWF, otherWF);
-                    break;
-                case "eucnorm":
-                    result = euclideanDistanceNorm(queryWF, otherWF);
-                    break;
-                default:
-                    result = cosineSimilarity(queryWF, otherWF);
-            }
-            temp = new Pairs(word, result);
             wordsWithScores.add(temp);
         }
         Collections.sort(wordsWithScores);
@@ -430,121 +400,11 @@ public class Main {
      
      
      //task 6
-     public void generateKMeans(TreeMap<String, List<WordFrequency>> allVectors, int k, int iter, int j){
+     public void generateKMeans(List<Vector> allVectors, int k, int iter){
          //generate random k means
-         Vector[] allVectorsArray = convertTreeMapToVectors(allVectors);
          Vector[] means = new Vector[k];
-         Random rand = new Random();
-         for(int i=0;i<k;i++){
-             means[i] = allVectorsArray[rand.nextInt(allVectors.size())];
-         }
-         
-         List<List<Vector>> clusters = null;
-         int closestMeanIndex = 0;
-         double minDistance = Integer.MAX_VALUE;
-         double euclideanDistance;
-         List<Vector> cluster;
-         for(int i=0;i<iter;i++){
-             //create empty clusters
-             clusters = new ArrayList<List<Vector>>(k);
-             for(int b=0;b<k;b++){
-                clusters.add(new ArrayList<Vector>());
-             }
-             //put each point in the corresponding cluster
-             double[] avgDistances = new double[k];
-             for(Vector v : allVectorsArray){
-                 closestMeanIndex = 0;
-                 minDistance = Integer.MAX_VALUE;
-                 for(int b=0;b<k;b++){
-                     euclideanDistance = euclideanDistance(v.listOfWordFrequencies, means[b].listOfWordFrequencies)*-1;
-                     if(euclideanDistance < minDistance){
-                         closestMeanIndex = b;
-                         minDistance = euclideanDistance;
-                     }
-                 }
-                 avgDistances[closestMeanIndex] += minDistance;
-                 clusters.get(closestMeanIndex).add(v);
-             }
-             
-             for(int b=0;b<avgDistances.length;b++){
-                 avgDistances[b] /= clusters.get(b).size();
-             }
-             
-             //calculate new means
-             for(int b=0;b<k;b++){
-                 cluster = clusters.get(b);
-                 if(cluster.size()==0)
-                     continue;
-                 Vector newMean = cluster.get(0);
-                 int sizeOfCluster = newMean.listOfWordFrequencies.size();
-                 Vector currentVector;
-                 List<WordFrequency> curWordFrequencies, newMeanWordFrequencies;
-                 newMeanWordFrequencies = newMean.listOfWordFrequencies;
-                 for(int a=1;a<cluster.size();a++){
-                    currentVector = cluster.get(1);
-                    curWordFrequencies = currentVector.listOfWordFrequencies;
-                    for(int c=0;c<curWordFrequencies.size();c++){
-                        newMeanWordFrequencies.get(c).frequency += curWordFrequencies.get(c).frequency;
-                    }
-                 }
-                 
-                 for(int a=0;a<newMeanWordFrequencies.size();a++){
-                    newMeanWordFrequencies.get(a).frequency /= sizeOfCluster;
-                 }
-                 means[b].listOfWordFrequencies = newMeanWordFrequencies;
-             }
-         }
-         if(j!=-1){
-             doStep7(means, clusters, j);
-         }
-         else{
-             printClusters(clusters);
-         }
-     }
-     
-     public void doStep7(Vector[] means, List<List<Vector>> clusters, int j){
-         List<Vector> cluster;
-         List<List<Pairs>> allPairs = new ArrayList<List<Pairs>>();
-         for(int i=0;i<clusters.size();i++){
-             cluster = clusters.get(i);
-             allPairs.add(computeScores(means[i].listOfWordFrequencies, cluster, "cos", "", false));
-         }
-         List<Pairs> pairList;
-         for(int i=0;i<allPairs.size();i++){
-             pairList = allPairs.get(i);
-             System.out.println("Cluster: "+i);
-             for(int b=0;b<j;b++){
-                 System.out.print(pairList.get(b).word+", ");
-             }
-             System.out.println();
-         }
-     }
-     
-     public Vector[] convertTreeMapToVectors(TreeMap<String, List<WordFrequency>> allVectors){
-         Vector[] allVectorsArray = new Vector[allVectors.size()];
-         int i=0;
-         Iterator it = allVectors.entrySet().iterator();
-         Map.Entry vector;
-         String key;
-         List<WordFrequency> vectorValue;
-         while(it.hasNext()){
-             vector = (Map.Entry)it.next();
-             key = (String) vector.getKey();
-             vectorValue = (List<WordFrequency>) vector.getValue();
-             allVectorsArray[i++] = new Vector(key, vectorValue);
-         }
-         return allVectorsArray;
-     }
-     
-     public void printClusters(List<List<Vector>> clusters){
-         int index = 0;
-         for(List<Vector> cluster: clusters) {
-             System.out.println("Cluster "+index++);
-             for(Vector v : cluster){
-                 System.out.print(v.keyWord+", ");
-             }
-             System.out.println();
-         }
+         //Random r = new Random();
+         //r.nextInt(allVectors);
      }
 }
-    
+    */

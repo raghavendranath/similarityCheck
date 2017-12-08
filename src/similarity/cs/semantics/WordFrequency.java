@@ -11,14 +11,16 @@ import java.util.*;
  */
 class WordFrequency implements Comparable<WordFrequency> {
     String word;
-    int frequency;
-    public WordFrequency(String word, int frequency){
+    double frequency;
+    public WordFrequency(String word, double frequency){
         this.word = word;
         this.frequency = frequency;
     }
     
     @Override
     public int compareTo(WordFrequency otherWord){
-        return otherWord.frequency-this.frequency;
+        if(this.frequency < otherWord.frequency) return 1;
+        if(this.frequency > otherWord.frequency) return -1;
+        return 0;
     }
 }
